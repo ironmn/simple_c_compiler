@@ -1,0 +1,8 @@
+while for switch
+temp dp char "string"
+123331 0x3ff 0b1110111 014244
+'c' 'd' '\n' + ++ - -- * / % >=
+<= < > & && || , ; : ( ) [] {}
+//testcase for lexer
+
+int
