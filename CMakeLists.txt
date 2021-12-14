@@ -16,6 +16,11 @@ endforeach()
 add_executable(simple_C_compiler gtest.cpp common.h token.h token.cpp
         lexer.h lexer.cpp
         error.h error.cpp
-        compiler.h compiler.cpp)
+        compiler.h compiler.cpp
+        symbol.cpp symbol.h
+        symtab.cpp symtab.h
+        # parser.cpp parser.h
+
+        )
 
 target_link_libraries(simple_C_compiler ${GTEST_LIBRARIES} pthread)
