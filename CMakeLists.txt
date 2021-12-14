@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.0)
 project(simple_C_compiler)
 # Locate GTest
 find_package(GTest REQUIRED)

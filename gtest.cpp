@@ -91,6 +91,8 @@ TEST(Lexer, tokenize){
     ASSERT_EQ(lexer.tokenize()->tag,RBRACE);
     ASSERT_EQ(lexer.tokenize()->tag,KW_INT);
 }
+
+
 int main() {
     testing::InitGoogleTest();
     return RUN_ALL_TESTS();

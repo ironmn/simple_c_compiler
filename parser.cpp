@@ -9,10 +9,11 @@
 #include "symtab.h"
 #include "error.h"
 #include "compiler.h"
+
 Parser::Parser(Lexer&lex,SymTab&tab)
         :lexer(lex),symtab(tab)
 {}
-
+//outsider entry interface for parser
 void Parser::analyse(){
     move();
     program();
@@ -29,11 +30,13 @@ void Parser::move(){
     }
 }
 
+
+
 /*
     匹配，查看并移动
 */
 bool Parser::match(Tag need){
-    //如果匹配的终结符是需要的，那么返回true并匹配
+    //if we match the terminal lexer we need, then move
     if(look->tag == need){
         move();
         return true;
@@ -103,6 +106,7 @@ void Parser::segment(){
     //匹配外部声明关键字
     bool ext = match(KW_EXTERN);
     Tag t = type();
+    //'ext' && 't' are inhierent attributes
     def(ext,t);
 }
 
@@ -140,6 +144,7 @@ Var* Parser::defdata(bool ext,Tag t){
         move();
         //和前面解释的原因一致。因为当前读取的非终结符会对后面的文法分析语义产生影响，
         //所以必须要将这些参数进行传递
+        //inherited attributes
         return varrdef(ext,t,false,name);
     }
         //如果下一个终结符是MUL类型的,则说明为指针变量
