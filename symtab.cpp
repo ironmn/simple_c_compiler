@@ -3,3 +3,8 @@
 //
 
 #include "symtab.h"
+
+
+void SymTab::addStr(Var *v) {
+
+}

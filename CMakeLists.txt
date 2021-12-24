@@ -22,6 +22,7 @@ foreach(file ${test_files})
     file(COPY ${file} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endforeach()
 
+
 add_executable(simple_C_compiler gtest.cpp common.h token.h token.cpp
         lexer.h lexer.cpp
         error.h error.cpp
@@ -32,7 +33,9 @@ add_executable(simple_C_compiler gtest.cpp common.h token.h token.cpp
 
         )
 
+
 target_link_libraries(simple_C_compiler gtest_main pthread)
+
 
 include(GoogleTest)
 gtest_discover_tests(simple_C_compiler)

@@ -52,10 +52,6 @@ bool Parser::match(Tag need){
 错误修复
 */
 #define _(T) || look->tag == T
-//定义F(C)这个操作的原因是为了对look当前所指向的词法记号进行自定义操作
-//如果所有的词法记号匹配都是通过match完成的，那么假如匹配成功，会直接调到
-//下一，但是我们设计的词法记号链表是单向流动的，不能够回头，在需要记录相关
-//信息的时候必须把读取和移进的操作分离
 #define F(C) look->tag == C
 void Parser::recovery(bool cond,SynError lost,SynError wrong){
     if(cond)//如果在给定的follow集合内
@@ -106,7 +102,7 @@ void Parser::segment(){
     //匹配外部声明关键字
     bool ext = match(KW_EXTERN);
     Tag t = type();
-    //'ext' && 't' are inhierent attributes
+    //'ext' && 't' are inherent attributes
     def(ext,t);
 }
 
@@ -126,7 +122,8 @@ Tag Parser::type(){
     }
         //否则报错
         //----------------------------------------need extra judge code
-    else return ERR;
+    else
+        recovery(F(ID)_(MUL),TYPE_LOST,TYPE_WRONG);
 }
 
 /*
@@ -161,6 +158,14 @@ Var* Parser::defdata(bool ext,Tag t){
     else{
         recovery(F(SEMICON)_(COMMA)_(ASSIGN)_(LBRACK),ID_LOST,ID_WRONG);
         return varrdef(ext,t,false,name);
+    }
+}
+
+void Parser::deflist(bool ext, Tag t) {
+    if(match(COMMA)){//如果成功匹配了逗号
+        //那么需要将下一个可能要进行定义或者声明的变量传递到符号表中
+        deflist(ext,t);
+
     }
 }
 

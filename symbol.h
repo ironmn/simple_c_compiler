@@ -39,6 +39,10 @@ class Var{
     void setName(string n);//设置名字
     void setArray(int len);//设定数组
     void clear();//清除关键字段信息
+
+
+public:
+    Var(vector<int> &sp,bool ext,)
 };
 
 class Fun{
@@ -49,11 +53,12 @@ class Fun{
     vector<Var*> paraVar;
 
     //临时变量地址分配
-    int maxDepth;
-    int curEsp;
+    int maxDepth;//栈的最大深度
+    int curEsp;//当前栈的位置
     bool relocated;
 
-    vector<int> scopeEsp;
+    vector<int> scopeEsp;//作用域栈指针的位置
+
 
 };
 #endif //SIMPLE_C_COMPILER_SYMBOL_H

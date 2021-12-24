@@ -22,6 +22,18 @@ class SymTab{
     hash_map<string,vector<Var*> *,string_hash> varTab;
     hash_map<string,Var*, string_hash> strTab;
     hash_map<string,Fun*,string_hash> funTab;
+
+public:
+    SymTab();//初始化符号表
+    ~SymTab();//清除内存
+
+
+    //变量管理
+    void addVar(Var* v);//添加一个变量
+    void addStr(Var* v);//添加一个字符串常量
+    Var* getVar(string name);//获取一个变量
+    vector<Var*> getGlbVars();//获取所有全局变量
+
 };
 
 
