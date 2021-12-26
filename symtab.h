@@ -43,12 +43,26 @@ public:
     SymTab();//初始化符号表
     ~SymTab();//清除内存
 
+    //作用域管理
+    void enter();//进入新的作用域
+    void leave();//离开作用域
 
     //变量管理
     void addVar(Var* v);//添加一个变量
     void addStr(Var* v);//添加一个字符串常量
     Var* getVar(string name);//获取一个变量
     vector<Var*> getGlbVars();//获取所有全局变量
+
+    //函数管理
+    void decFun(Fun *fun);//函数声明控制
+    void defFun(Fun* fun);//函数定义控制
+    void endDefFun(Fun* fun);//结束函数定义
+
+    //外部接口调用：
+
+    vector<int>& getScopePath();//获取当前的作用域路径
+    void toString();//输出信息
+    Fun* getCurFun();//获取当前正在分析的函数
 
 };
 

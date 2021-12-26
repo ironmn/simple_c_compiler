@@ -28,7 +28,7 @@ class Var{
     };
     string strVal;   //字符串常量的值
     string ptrVal;	 //初始化字符指针常量字符串的名字
-    Var *prt;		//变量的指针变量
+    Var *ptr;		//变量的指针变量
     int size;		//变量的大小
     int offset;		//变量的栈帧偏移量
 

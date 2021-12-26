@@ -115,3 +115,25 @@ Var* SymTab::getVar(string name){//获取一个变量
     if(!select) SEMERROR(VAR_UN_DEC,name);//变量未声明
     return select;
 }
+
+/**
+ * 返回全局变量的列表
+ * @todo 直接设置一个全局变量列表，避免线性查找
+ * @return
+ */
+vector<Var*> SymTab::getGlbVars() {
+    vector<Var*> glbVars;
+    for(int i = 0;i<varList.size();i++){
+        string varName = varList[i];
+        if(varName[0] == '<')continue;
+        vector<Var* > &list = *varTab[varName];
+        for(int j=0;j<list.size();j++){
+            if(list[j]->getPath().size() == 1){
+                //作用域路径长度为1则足以说明这是一个全局变量
+                glbVars.push_back(list[j]);
+                break;
+            }
+        }
+    }
+    return glbVars;
+}

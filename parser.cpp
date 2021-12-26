@@ -121,7 +121,6 @@ Tag Parser::type(){
         move();
     }
         //否则报错
-        //----------------------------------------need extra judge code
     else
         recovery(F(ID)_(MUL),TYPE_LOST,TYPE_WRONG);
 }
@@ -161,13 +160,85 @@ Var* Parser::defdata(bool ext,Tag t){
     }
 }
 
+/**<deflist>    ->      COMMA <defdata> <deflist> | SEMICON
+ * @author Martin Xie
+ * @details
+ * <deflist>带有继承属性ext,t等等，将这些属性验证递归下降分析传递到下面
+ * 同时后面的<defdata>表示变量的定义。
+ *
+ * @param ext 是否为外部变量
+ * @param t 变量类型
+ */
 void Parser::deflist(bool ext, Tag t) {
     if(match(COMMA)){//如果成功匹配了逗号
         //那么需要将下一个可能要进行定义或者声明的变量传递到符号表中
+        symtab.addVar(defdata(ext,t));//添加新的变量
         deflist(ext,t);
+    }
+    else if(match(SEMICON)){
+        return;//结束变量定义
+    }
+    else{//如果匹配到的是ID或者MUL类型的，
+        if(F(ID)_(MUL)){
+            recovery(1,COMMA_LOST,COMMA_WRONG);
+            symtab.addVar(defdata(ext,t));
+            deflist(ext,t);
+        }
+        else{
+            recovery(TYPE_FIRST||STATEMENT_FIRST||F(KW_EXTERN)_(RBRACE),
+                     SEMICON_LOST,SEMICON_WRONG);
 
+        }
     }
 }
+
+/**
+ * <varrdef>       ->       LBRACK NUM RBRACK | <init>
+ * @param ext
+ * @param t
+ * @param ptr
+ * @param name
+ * @return
+ */
+Var* Parser::varrdef(bool ext, Tag t, bool ptr, string name) {
+    if(match(LBRACK)){//匹配了左括号
+        int len = 0;
+        if(F(NUM)){
+            len = ((Num*)look)->val;
+            move();
+        }
+        else{
+            recovery(F(RBRACK),NUM_LOST,NUM_WRONG);
+        }
+        if(!match(RBRACE)){//如果没有匹配到右中括号，那么检查后面是否是逗号和分号。
+            recovery(F(COMMA)_(SEMICON),RBRACE_LOST,RBRACE_WRONG);
+        }
+        return new Var(symtab.getScopePath(),ext,t,name,len);
+    }
+    else{
+        return init(ext,t,ptr,name);
+    }
+}
+
+/**
+ * <init>       ->      ASSIGN <expr> | e
+ * @param ext
+ * @param t
+ * @param ptr
+ * @param name
+ * @return
+ */
+Var* Parser::init(bool ext, Tag t, bool ptr, string name) {
+    Var* initVal = NULL;
+    if(match(ASSIGN)){
+        initVal=expr();
+    }
+    return new Var(symtab.getScopePath(),ext,t,pre,name, initVal);//返回带有初始值的变量
+}
+
+
+
+
 
 
 
