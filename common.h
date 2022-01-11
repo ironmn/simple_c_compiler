@@ -176,6 +176,11 @@ class SymTab;
 class Var;
 class Fun;
 class Parser;
+class GenIR;
+class InterInst;
+class InterCode;
+class Compiler;
+
 
 
 #define CONST

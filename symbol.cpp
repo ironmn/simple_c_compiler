@@ -3,6 +3,7 @@
 //
 #include "common.h"
 #include "symbol.h"
+#include "symtab.h"
 #include "token.h"
 #include "error.h"
 
@@ -11,6 +12,14 @@
 /*******************************************************************************
                                    变量结构
 *******************************************************************************/
+
+/**
+ * 获取void特殊变量
+ * @return
+ */
+Var* Var::getVoid() {
+    return SymTab::voidVar;
+}
 
 /*
 	void变量
@@ -25,6 +34,13 @@ Var::Var()
     type=KW_VOID;//hack类型
     isPtr=true;//消除基本类型标志
 }
+
+/**
+ * 获取特殊变量
+ */
+ Var* Var::getTrue() {
+     return SymTab::one;
+ }
 
 //关键信息初始化
 void Var::clear() {
@@ -417,4 +433,74 @@ string Var::getRawStr()
     }
     raw.append("\\000");//结束标记
     return raw;
+}
+
+
+Fun::Fun(bool ext, Tag t, string n, vector<Var *> &paraList) {
+    externed = ext;
+    type = t;
+    name = n;
+    paraVar = paraList;
+    curEsp = 0;
+    maxDepth = 0;
+    for(int i = 0,argOff = 4;i < paraVar.size();i++,argOff += 4){
+        paraVar[i]->setOffset(argOff);
+    }
+
+    relocated = false;
+}
+
+Fun::~Fun() {
+
+}
+
+/**
+ * 定义局部变量的栈帧偏移
+ * @param var
+ */
+void Fun::locate(Var *var) {
+    int size = var->getSize();
+    size += (4 - size%4) % 4;//4字节对齐
+    scopeEsp.back() += size;
+    curEsp += size;
+    var->setOffset(-curEsp);//局部变量的栈帧偏移为负数
+}
+
+/*
+	声明定义匹配
+*/
+#define SEMWARN(code,name) Error::semWarn(code,name)
+bool Fun::match(Fun *f) {
+    //区分函数的返回值
+    if(name!=f->name)
+        return false;
+    if(paraVar.size()!=f->paraVar.size())
+        return false;
+    int len=paraVar.size();
+    for(int i=0;i<len;i++){
+        if(GenIR::typeCheck(paraVar[i],f->paraVar[i])){//类型兼容
+            if(paraVar[i]->getType()!=f->paraVar[i]->getType()){//但是不完全匹配
+                SEMWARN(FUN_DEC_CONFLICT,name);//函数声明冲突——警告
+            }
+        }
+        else
+            return false;
+    }
+    //匹配成功后再验证返回类型
+    if(type!=f->type){
+        SEMWARN(FUN_RET_CONFLICT,name);//函数返回值冲突——警告
+    }
+    return true;
+}
+
+bool Fun::match(vector<Var*>&args)
+{
+    if(paraVar.size()!=args.size())
+        return false;
+    int len=paraVar.size();
+    for(int i=0;i<len;i++){
+        if(!GenIR::typeCheck(paraVar[i],args[i]))//类型检查不兼容
+            return false;
+    }
+    return true;
 }

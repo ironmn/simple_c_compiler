@@ -86,10 +86,10 @@ void SymTab::addVar(Var *var) {
             return;
         }
     }
-//    if(ir){
-//        int flag=ir->genVarInit(var);//产生变量初始化语句,常量返回0
-//        if(curFun&&flag)curFun->locate(var);//计算局部变量的栈帧偏移
-//    }
+    if(ir){
+        int flag=ir->genVarInit(var);//产生变量初始化语句,常量返回0
+        if(curFun&&flag)curFun->locate(var);//计算局部变量的栈帧偏移
+    }
 }
 
 //添加一个字符串常量
@@ -136,4 +136,21 @@ vector<Var*> SymTab::getGlbVars() {
         }
     }
     return glbVars;
+}
+
+/*
+	获取scopePath
+*/
+vector<int>& SymTab::getScopePath()
+{
+    return scopePath;
+}
+
+void SymTab::setIr(GenIR *ir) {
+    this->ir = ir;
+}
+
+void SymTab::addInst(InterInst *inst) {
+    if(curFun) curFun->addInst(inst);
+    else delete inst;
 }

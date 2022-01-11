@@ -31,7 +31,9 @@ add_executable(simple_C_compiler gtest.cpp common.h token.h token.cpp
         symtab.cpp symtab.h
         # parser.cpp parser.h
 
-        )
+        set.cpp set.h
+        intercode.cpp intercode.h
+        genir.cpp genir.h)
 
 
 target_link_libraries(simple_C_compiler gtest_main pthread)

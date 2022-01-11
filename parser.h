@@ -75,15 +75,18 @@ class Parser{
     Lexer &lexer;
     Token* look;//向前看记号
 
+    //符号表
     SymTab &symtab;
 
+    //中间代码生成器
+    GenIR &ir;
     void move();
     bool match(Tag t);
     //语法错误恢复
     void recovery(bool cond,SynError lost,SynError wrong);
 
 public:
-    Parser(Lexer &lex, SymTab &tab);
+    Parser(Lexer &lex, SymTab &tab, GenIR& inter);
 
     void analyse();//外部调用parser的接口
 };

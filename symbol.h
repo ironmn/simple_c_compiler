@@ -42,6 +42,13 @@ class Var{
 
 
 public:
+    //特殊变量，1-4步长
+    static Var* getStep(Var* v);
+    static Var* getVoid();//获取void特殊变量
+    static Var* getTrue();//获取true变量
+
+
+    //构造函数
     Var(vector<int> &sp,bool ext,Tag t,bool ptr,string name,Var* init = NULL);//变量
     Var(vector<int> &sp,bool ext,Tag t,string name,int len);//数组
     Var(Token* lt);//设定字面量
@@ -104,7 +111,44 @@ class Fun{
     bool relocated;
 
     vector<int> scopeEsp;//作用域栈指针的位置
+    InterCode interCode;//中间代码
+    InterInst* returnPoint;//返回点
+    DFG* dfg;//数据流图指针
+    list<InterInst*> optCode;//优化后的中间代码
 
+public:
+    //构造函数和析构函数
+    Fun (bool ext,Tag t,string n,vector<Var*>&paraList);
+    ~Fun();
 
+    //声明定义与使用
+    bool match(Fun*f);//声明定义匹配
+    bool match(vector<Var*>&args);//行参实参匹配
+    void define(Fun*def);//将函数声明转换为定义，需要拷贝参数列表，设定extern
+
+    //作用域管理，局部变量地址计算
+    void enterScope();//进入一个新的作用域
+    void leaveScope();//离开当前作用域
+    void locate(Var*var);//定位局部变了栈帧偏移
+
+    //中间代码
+    void addInst(InterInst*inst);//添加一条中间代码
+    void setReturnPoint(InterInst*inst);//设置函数返回点
+    InterInst* getReturnPoint();//获取函数返回点
+    int getMaxDep();//获取最大栈帧深度
+    void setMaxDep(int dep);//设置最大栈帧深度
+    void optimize(SymTab*tab);//执行优化操作
+
+    //外部调用掉口
+    bool getExtern();//获取extern
+    void setExtern(bool ext);//设置extern
+    Tag getType();//获取函数类型
+    string& getName();//获取名字
+    bool isRelocated();//栈帧重定位了？
+    vector<Var*>& getParaVar();//获取参数列表，用于为参数生成加载代码
+    void toString();//输出信息
+    void printInterCode();//输出中间代码
+    void printOptCode();//输出优化后的中间代码
+    void genAsm(FILE*file);//输出汇编代码
 };
 #endif //SIMPLE_C_COMPILER_SYMBOL_H

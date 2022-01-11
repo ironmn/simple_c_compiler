@@ -7,6 +7,7 @@
 #pragma once
 #include "common.h"
 #include "symbol.h"
+#include "genir.h"
 #include <ext/hash_map>
 using namespace __gnu_cxx;
 
@@ -32,7 +33,7 @@ class SymTab{
     vector<int> scopePath;//动态记录作用域的路径
 
     //中间代码生成器
-    //GenIR* ir;
+    GenIR* ir;
 
 public:
     static Var* voidVar;//特殊变量
@@ -57,12 +58,19 @@ public:
     void decFun(Fun *fun);//函数声明控制
     void defFun(Fun* fun);//函数定义控制
     void endDefFun(Fun* fun);//结束函数定义
+    Fun* getFun(string name,vector<Var*>& args);//根据调用类型，获取一个函数
+    void addInst(InterInst*inst);//添加一条中间代码
 
-    //外部接口调用：
-
-    vector<int>& getScopePath();//获取当前的作用域路径
+    //外部调用接口
+    void setIr(GenIR*ir);//设置中间代码生成器
+    vector<int>& getScopePath();//获取scopePath
+    Fun*getCurFun();//获取当前分析的函数
     void toString();//输出信息
-    Fun* getCurFun();//获取当前正在分析的函数
+    void printInterCode();//输出中间指令
+    void optimize();//执行优化操作
+    void printOptCode();//输出中间指令
+    void genData(FILE*file);//输出数据
+    void genAsm(char*fileName);//输出汇编文件
 
 };
 

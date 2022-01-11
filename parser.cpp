@@ -10,8 +10,8 @@
 #include "error.h"
 #include "compiler.h"
 
-Parser::Parser(Lexer&lex,SymTab&tab)
-        :lexer(lex),symtab(tab)
+Parser::Parser(Lexer&lex,SymTab&tab,GenIR&inter)
+        :lexer(lex),symtab(tab),ir(inter)
 {}
 //outsider entry interface for parser
 void Parser::analyse(){
@@ -233,10 +233,80 @@ Var* Parser::init(bool ext, Tag t, bool ptr, string name) {
     if(match(ASSIGN)){
         initVal=expr();
     }
-    return new Var(symtab.getScopePath(),ext,t,pre,name, initVal);//返回带有初始值的变量
+    return new Var(symtab.getScopePath(),ext,t,ptr,name, initVal);//返回带有初始值的变量
+}
+
+/**
+ * <def>        ->          ID <idtail> | MUL ID <init> <deflist>
+ * @param ext
+ * @param t
+ */
+void Parser::def(bool ext, Tag t) {
+    string name = "";
+    if(match(MUL)){//指针变量
+        if(F(ID)){
+            name = ((Id*)look)->name;
+            move();
+        }
+        else recovery(F(SEMICON)_(COMMA)_(ASSIGN),ID_LOST,ID_WRONG);
+        symtab.addVar(init(ext,t,true,name));
+        deflist(ext,t);
+    }
+    else{
+        if(F(ID)){
+            name = ((Id*)look)->name;
+            move();
+        }
+        else recovery(F(SEMICON)_(COMMA)_(ASSIGN)_(LPAREN)_(LBRACK),ID_LOST,ID_WRONG);
+        idtail(ext,t,false,name);
+    }
 }
 
 
+
+
+
+/**表达式处理
+ * <altexpr>        ->         <expr> | e
+ * @return
+ */
+Var* Parser::aloexpr() {
+    if(EXPR_FIRST){
+        return expr();
+    }
+    //表明返回的类型为空
+    return Var::getVoid();
+}
+
+/**
+ * <expr>       ->          <assexpr>
+ * */
+Var* Parser::expr() {
+    return assexpr();
+}
+
+/**
+ * <assexpr>    ->      <orexpr><asstail>
+ * @return
+ */
+Var* Parser::assexpr() {
+    Var* lval = orexpr();
+    return asstail(lval);
+}
+/**
+ * <asstail>            ->      ASSIGN <orexpr> <asstail> | e
+ * @param lval
+ * @return
+ */
+
+Var* Parser::asstail(Var *lval) {
+    if(match(ASSIGN)){
+        Var* rval = orexpr();
+        Var* result = ir.genTwoOp(lval,ASSIGN,rval);
+        return asstail(result);
+    }
+    return lval;//表明为空字符集，没有匹配到等于符号
+}
 
 
 
