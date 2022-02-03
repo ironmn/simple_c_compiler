@@ -13,10 +13,19 @@
                                    变量结构
 *******************************************************************************/
 
+Var* Var::getStep(Var*v)
+{
+    if(v->isBase())return SymTab::one;
+    else if(v->type==KW_CHAR)return SymTab::one;
+    else if(v->type==KW_INT)return SymTab::four;
+    else return NULL;
+}
+
 /**
  * 获取void特殊变量
  * @return
  */
+
 Var* Var::getVoid() {
     return SymTab::voidVar;
 }
@@ -435,42 +444,108 @@ string Var::getRawStr()
     return raw;
 }
 
+/**
+ * 输出符号表中的变量信息
+ *
+ */
+void Var::toString()
+{
+    if(externed)printf("externed ");
+    //输出type
+    printf("%s",tokenName[type]);
+    //输出指针
+    if(isPtr)printf("*");
+    //输出名字
+    printf(" %s",name.c_str());
+    //输出数组
+    if(isArray)printf("[%d]",arraySize);
+    //输出初始值
+    if(inited){
+        printf(" = ");
+        switch(type){
+            case KW_INT:printf("%d",intVal);break;
+            case KW_CHAR:
+                if(isPtr)printf("<%s>",ptrVal.c_str());
+                else printf("%c",charVal);
+                break;
+        }
+    }
+    printf("; size=%d scope=\"",size);
+    for(int i=0;i<scopePath.size();i++){
+        printf("/%d",scopePath[i]);
+    }
+    printf("\" ");
+    if(offset>0)
+        printf("addr=[ebp+%d]",offset);
+    else if(offset<0)
+        printf("addr=[ebp%d]",offset);
+    else if(name[0]!='<')
+        printf("addr=<%s>",name.c_str());
+    else
+        printf("value='%d'",getVal());
+}
 
-Fun::Fun(bool ext, Tag t, string n, vector<Var *> &paraList) {
-    externed = ext;
-    type = t;
-    name = n;
-    paraVar = paraList;
-    curEsp = 0;
-    maxDepth = 0;
-    for(int i = 0,argOff = 4;i < paraVar.size();i++,argOff += 4){
+/*
+	输出变量的中间代码形式
+*/
+void Var::value()
+{
+    if(literal){//是字面量
+        if(type==KW_INT)
+            printf("%d",intVal);
+        else if(type==KW_CHAR){
+            if(isArray)
+                printf("%s",name.c_str());
+            else
+                printf("%d",charVal);
+        }
+    }
+    else
+        printf("%s",name.c_str());
+}
+
+
+
+Fun::Fun(bool ext,Tag t,string n,vector<Var*>&paraList)
+{
+    externed=ext;
+    type=t;
+    name=n;
+    paraVar=paraList;
+//    curEsp=Plat::stackBase;//没有执行寄存器分配前，不需要保存现场，栈帧基址不需要修正。
+//    maxDepth=Plat::stackBase;//防止没有定义局部变量导致最大值出错。
+    //保存现场和恢复现场有函数内部解决，因此参数偏移不需要修正！
+    for(int i=0,argOff=4;i<paraVar.size();i++,argOff+=4){//初始化参数变量地址从左到右，参数进栈从右到左
         paraVar[i]->setOffset(argOff);
     }
-
-    relocated = false;
+//    dfg=NULL;
+    relocated=false;
 }
 
-Fun::~Fun() {
-
+Fun::~Fun()
+{
+//    if(dfg)delete dfg;//清理数据流图
 }
 
-/**
- * 定义局部变量的栈帧偏移
- * @param var
- */
-void Fun::locate(Var *var) {
-    int size = var->getSize();
-    size += (4 - size%4) % 4;//4字节对齐
-    scopeEsp.back() += size;
-    curEsp += size;
-    var->setOffset(-curEsp);//局部变量的栈帧偏移为负数
+
+/*
+	定位局部变了栈帧偏移
+*/
+void Fun::locate(Var*var)
+{
+    int size=var->getSize();
+    size+=(4-size%4)%4;//按照4字节的大小整数倍分配局部变量
+    scopeEsp.back()+=size;//累计作用域大小
+    curEsp+=size;//累计当前作用域大小
+    var->setOffset(-curEsp);//局部变量偏移为负数
 }
 
 /*
 	声明定义匹配
 */
 #define SEMWARN(code,name) Error::semWarn(code,name)
-bool Fun::match(Fun *f) {
+bool Fun::match(Fun*f)
+{
     //区分函数的返回值
     if(name!=f->name)
         return false;
@@ -493,6 +568,12 @@ bool Fun::match(Fun *f) {
     return true;
 }
 
+
+
+
+/*
+	行参实参匹配
+*/
 bool Fun::match(vector<Var*>&args)
 {
     if(paraVar.size()!=args.size())
@@ -503,4 +584,170 @@ bool Fun::match(vector<Var*>&args)
             return false;
     }
     return true;
+}
+
+/*
+	将函数声明转换为定义，需要拷贝参数列表，设定extern
+*/
+void Fun::define(Fun*def)
+{
+    externed=false;//定义
+    paraVar=def->paraVar;//拷贝参数
+}
+
+/*
+	添加一条中间代码
+*/
+void Fun::addInst(InterInst*inst)
+{
+    interCode.addInst(inst);
+}
+
+/*
+	设置函数返回点
+*/
+void Fun::setReturnPoint(InterInst*inst)
+{
+    returnPoint=inst;
+}
+
+/*
+	获取函数返回点
+*/
+InterInst* Fun::getReturnPoint()
+{
+    return returnPoint;
+}
+
+/*
+	进入一个新的作用域
+*/
+void Fun::enterScope()
+{
+    scopeEsp.push_back(0);
+}
+
+/*
+	离开当前作用域
+*/
+void Fun::leaveScope()
+{
+    maxDepth=(curEsp>maxDepth)?curEsp:maxDepth;//计算最大深度
+    curEsp-=scopeEsp.back();
+    scopeEsp.pop_back();
+}
+
+/*
+	设置extern
+*/
+void Fun::setExtern(bool ext)
+{
+    externed=ext;
+}
+
+/*
+	获取extern
+*/
+bool Fun::getExtern()
+{
+    return externed;
+}
+
+Tag Fun::getType()
+{
+    return type;
+}
+
+/*
+	获取名字
+*/
+string& Fun::getName()
+{
+    return name;
+}
+
+/*
+	获取参数列表，用于为参数生成加载代码
+*/
+vector<Var*>& Fun::getParaVar()
+{
+    return paraVar;
+}
+
+
+/*
+	输出信息
+*/
+void Fun::toString()
+{
+    //输出type
+    printf("%s",tokenName[type]);
+    //输出名字
+    printf(" %s",name.c_str());
+    //输出参数列表
+    printf("(");
+    for(int i=0;i<paraVar.size();i++){
+        printf("<%s>",paraVar[i]->getName().c_str());
+        if(i!=paraVar.size()-1)printf(",");
+    }
+    printf(")");
+    if(externed)printf(";\n");
+    else{
+        printf(":\n");
+        printf("\t\tmaxDepth=%d\n",maxDepth);
+    }
+}
+
+
+
+/*
+	输出中间代码
+*/
+void Fun::printInterCode()
+{
+    if(externed)return;
+    printf("-------------<%s>Start--------------\n",name.c_str());
+    interCode.toString();
+    printf("--------------<%s>End---------------\n",name.c_str());
+}
+
+/*
+	输出优化后的中间代码
+*/
+void Fun::printOptCode()
+{
+    if(externed)return;
+    printf("-------------<%s>Start--------------\n",name.c_str());
+    for (list<InterInst*>::iterator i = optCode.begin(); i != optCode.end(); ++i)
+    {
+        (*i)->toString();
+    }
+    printf("--------------<%s>End---------------\n",name.c_str());
+}
+
+
+/*
+	获取最大栈帧深度
+*/
+int Fun::getMaxDep()
+{
+    return maxDepth;
+}
+
+/*
+	设置最大栈帧深度
+*/
+void Fun::setMaxDep(int dep)
+{
+    maxDepth=dep;
+    //设置函数栈帧被重定位标记，用于生成不同的栈帧保护代码
+    relocated=true;
+}
+
+/*
+	函数栈帧被重新定位了
+*/
+bool Fun::isRelocated()
+{
+    return relocated;
 }

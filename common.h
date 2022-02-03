@@ -166,6 +166,8 @@ enum SemWarn
     FUN_RET_CONFLICT		//函数返回值类型冲突
 };
 
+
+extern const char * tokenName[];
 //前置声明
 //使用前置声明只能以指针或者引用的形式进行
 class Token;

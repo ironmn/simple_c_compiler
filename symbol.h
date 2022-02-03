@@ -7,6 +7,7 @@
 #pragma once
 
 #include"common.h"
+#include "intercode.h"
 
 class Var{
     bool literal;	//判断是否为常量
@@ -113,7 +114,7 @@ class Fun{
     vector<int> scopeEsp;//作用域栈指针的位置
     InterCode interCode;//中间代码
     InterInst* returnPoint;//返回点
-    DFG* dfg;//数据流图指针
+    //DFG* dfg;//数据流图指针
     list<InterInst*> optCode;//优化后的中间代码
 
 public:
@@ -137,7 +138,7 @@ public:
     InterInst* getReturnPoint();//获取函数返回点
     int getMaxDep();//获取最大栈帧深度
     void setMaxDep(int dep);//设置最大栈帧深度
-    void optimize(SymTab*tab);//执行优化操作
+//    void optimize(SymTab*tab);//执行优化操作
 
     //外部调用掉口
     bool getExtern();//获取extern
@@ -149,6 +150,6 @@ public:
     void toString();//输出信息
     void printInterCode();//输出中间代码
     void printOptCode();//输出优化后的中间代码
-    void genAsm(FILE*file);//输出汇编代码
+//    void genAsm(FILE*file);//输出汇编代码
 };
 #endif //SIMPLE_C_COMPILER_SYMBOL_H

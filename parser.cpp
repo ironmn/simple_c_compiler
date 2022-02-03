@@ -294,19 +294,323 @@ Var* Parser::assexpr() {
     return asstail(lval);
 }
 /**
- * <asstail>            ->      ASSIGN <orexpr> <asstail> | e
+ * <asstail>            ->      ASSIGN <assexpr>| e
  * @param lval
  * @return
+ * @describe 由于赋值语句是右结合的，所以在递归的过程中，应当使用后序遍历的方式，
+ *           即直接遍历到AST的叶子节点上，然后开始返回
  */
 
 Var* Parser::asstail(Var *lval) {
     if(match(ASSIGN)){
-        Var* rval = orexpr();
+        Var* rval = assexpr();//囊括了右边的所有子表达式
         Var* result = ir.genTwoOp(lval,ASSIGN,rval);
         return asstail(result);
     }
-    return lval;//表明为空字符集，没有匹配到等于符号
+    return lval;//表明为空字符集，没有匹配到等于符号，这时直接返回参数中的属性值
 }
+
+/**
+ * @syntax <orexpr>     ->      <andexpr> <ortail>
+ * @return
+ */
+Var* Parser::orexpr() {
+    Var *lval = andexpr();
+    return ortail(lval);
+}
+
+/**
+ *
+ * @syntax <ortail>      ->     OR <andexpr> <ortail> | e
+ * @param lval 从左边传递过来的左值
+ * @return
+ */
+Var* Parser::ortail(Var *lval) {
+    if(match(OR)){
+        Var* rval = andexpr();
+        Var* result = ir.genTwoOp(lval,OR,rval);
+        return ortail(result);
+    }
+    return lval;
+}
+
+/**
+ * @syntax  <andexpr>       ->      <cmpexpr><andtail>
+ * @return
+ */
+Var* Parser::andexpr() {
+    Var* lval = cmpexpr();
+    return andtail(lval);
+}
+
+/**
+ * @syntax <andtail>        ->          AND <cmpexpr> <andtail> |  e
+ * @param lval
+ * @return
+ */
+Var* Parser::andtail(Var *lval) {
+    if(match(AND)){
+        Var* rval = cmpexpr();
+        Var* result = ir.genTwoOp(lval,AND,rval);
+        return andtail(result);
+    }
+    return lval;
+}
+
+/**
+ * @syntax <cmpexpr>       ->    <aloexpr> <cmptail>
+ * @return
+ */
+Var* Parser::cmpexpr() {
+    Var* lval = aloexpr();
+    return cmptail(lval);
+}
+
+
+/**
+ * @syntax <cmptail>        ->   <cmps> <aloexpr> <cmptail> | e
+ * @param lval
+ * @return
+ */
+Var* Parser::cmptail(Var *lval) {
+    if(F(GT)_(GE)_(LT)_(LE)_(EQU)_(NEQU)){
+        Tag opt=cmps();
+        Var*rval=aloexpr();
+        Var* result=ir.genTwoOp(lval,opt,rval);
+        return cmptail(result);
+    }
+    return lval;
+}
+
+/*
+	<cmps>				->	gt|ge|ls|le|equ|nequ
+*/
+Tag Parser::cmps(){
+    Tag opt = look->tag;
+    move();
+    return opt;
+}
+
+/**
+ * @describe 算术运算表达式
+ * @syntax <aloexpr>			->	<item><alotail>
+ * @return
+ */
+Var* Parser::aloexpr() {
+    Var *lval = item();//运算单元
+    return alotail(lval);
+}
+
+/**
+ * @symtax <alotail>        ->     <adds> <item> <alotail> | e
+ * @param lval
+ * @return
+ */
+Var *Parser::alotail(Var *lval) {
+    if(F(ADD)_(SUB)){
+        Tag opt = adds();
+        Var* rval = item();
+        Var* result = ir.genTwoOp(lval,opt,rval);
+        return alotail(result);
+    }
+    return lval;
+}
+
+/**
+ * @syntax <adds>       ->      ADD | SUB
+ * @return
+ */
+Tag Parser::adds(){
+    Tag opt = look->tag;
+    move();
+    return opt;
+}
+
+/**
+ * @syntax  <item>      ->      <factor> <itemtail>
+ * @return
+ */
+Var* Parser::item(){
+    Var *lval = factor();
+    return itemtail(lval);
+
+}
+
+/**
+ * @syntax  <itemtail>      ->      <muls><factor><itemtail>  | e
+ * @param lval
+ * @return
+ */
+
+Var* Parser::itemtail(Var *lval) {
+    if(F(MUL)_(DIV)_(MOD)){
+        Tag opt = muls();
+        Var* rval = factor();
+        Var* result = ir.genTwoOp(lval,opt,rval);
+        return itemtail(result);
+    }
+    return lval;
+}
+
+/**
+ * @syntax   <muls>     ->      MUL | DIV | MOD
+ * @return
+ */
+Tag Parser::muls(){
+    Tag opt = look->tag;
+    move();
+    return opt;
+
+}
+
+
+/**
+ * @syntax      <factor>     ->      <lop> <factor> | <val>
+ * @return
+ */
+Var* Parser::factor(){
+    if(F(NOT)_(SUB)_(LEA)_(MUL)_(INC)_(DEC)){
+        Tag opt = lop();
+        Var* v = factor();
+        return ir.genOneOpLeft(opt,v);//左单目操作
+    }
+    else{
+        return val();
+    }
+}
+
+/**
+ * @syntax     <lop>    ->      NOT | SUB | LEA | MUL | INC | DEC
+ * @return
+ */
+Tag Parser::lop(){
+    Tag opt = look->tag;
+    move();
+    return opt;
+}
+
+
+/**
+ * @syntax      <val>       ->          <elem><rop>
+ * @return
+ */
+Var* Parser::val(){
+    Var* v = elem();
+    if(F(INC)_(DEC)){
+        Tag opt = rop();
+        v = ir.genOneOpRight(v,opt);
+    }
+    return v;
+}
+
+/**
+ * @syntax  <rop>       ->      INCR  | DECR | e
+ * @return
+ */
+Var* Parser::rop(){
+    Tag opt = look->tag;
+    move();
+    return opt;
+}
+
+/**
+ * @syntax  <elem>		->	ID <idexpr>|LPAREN <expr> RPAREN|<literal>
+ * @return
+ */
+Var* Parser::elem() {
+    Var* v = NULL;
+    if(F(ID)){
+        string name = ((Id*)look)->name;
+        move();
+        v = idexpr(name);
+    }
+    else if(match(LPAREN)){
+        v = expr();
+        if(!match(RPAREN)){
+            recovery(LVAL_OPR,RPAREN_LOST,RPAREN_WRONG);
+        }
+    }
+    else v = literal();//常量
+    return v;
+}
+
+/**
+ * @syntax      <literal>   ->      NUM | STR | CH
+ * @return
+ */
+Var* Parser::literal() {
+    Var* v = NULL;
+    if(F(NUM)_(STR)_(CH)){
+        v = new Var(look);
+        if(F(STR)){
+            symtab.addStr(v);
+        }
+        else symtab.addVar(v);
+        move();
+    }
+    else recovery(RVAL_OPR,LITERAL_LOST,LITERAL_WRONG);
+    return v;
+}
+
+/**
+ * <idexpr>       ->        LBRACK  <expr>  RBRACK | LPAREN <realarg>  RPAREN | e
+ * @param name
+ * @return
+ */
+Var* Parser::idexpr(string name) {
+    Var *v = NULL;
+    if(match(LBRACK)){
+        Var* index = expr();
+        if(!match(RBRAK)){
+            recovery(LVAL_OPR,LBRACK_LOST,LBRACK_WRONG);
+        }
+        Var* array = symtab.getVar(name);//获取数组
+        v = ir.genArray(array,index);//产生数组运算表达式
+    }
+    else if(match(LPAREN)){
+        vector<Var* > args;
+        realarg(args);
+        if(!match(RBRACE)){
+            recovery(RVAL_OPR,RPAREN_LOST,RPAREN_WRONG);
+        }
+        Fun *function = symtab.getFun(name,args);
+        v = ir.genCall(function,args);
+    }
+    else v = symtab.genVar(name);//获取变量
+    return v;
+}
+
+
+/**
+ * @syntax   <realarg>    ->      <arg> <argilst>  | e
+ * @param args
+ */
+void Parser::realarg(vector<Var *> &args) {
+    if(EXPR_FIRST){
+        args.push_back(arg());
+        arglist(args);
+    }
+}
+
+/**
+ * @syntax <arglist>        ->      COMMA<arg><arglist> | e
+ * @param args
+ */
+void Parser::arglist(vector<Var *> &args) {
+    if(match(COMMA)){
+        args.push_back(arg());
+        arglist(args);
+    }
+}
+
+/**
+ * @syntax <arg>    ->      <expr>
+ * @return
+ */
+Var* Parser::arg() {
+    return expr();//添加一个实际参数
+}
+
 
 
 

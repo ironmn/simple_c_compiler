@@ -54,6 +54,7 @@ public:
     Var* getVar(string name);//获取一个变量
     vector<Var*> getGlbVars();//获取所有全局变量
 
+
     //函数管理
     void decFun(Fun *fun);//函数声明控制
     void defFun(Fun* fun);//函数定义控制
